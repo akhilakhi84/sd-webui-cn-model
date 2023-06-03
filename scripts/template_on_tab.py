@@ -88,8 +88,6 @@ def get_model_url(model_name):
         return download_file(url, file_name)
 
 def download_file(url, file_name, pr=gr.Progress(track_tqdm=True)):
-    gr.TextArea.update(value="Downloading "+file_name+"...", visible=True)
-
     if not os.path.exists(MODELFOLDER):
         os.makedirs(MODELFOLDER)
     
