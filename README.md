@@ -10,6 +10,6 @@ Under `Extensions` go to `Install from URL` and paste the link to this repositor
 
 Just click on the Model you want to download and Click `Download` button
 
-## Note
+# Note
 
 You must restart webui console after installing this extension. Otherwise it will not load properly
