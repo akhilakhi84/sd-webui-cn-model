@@ -37,6 +37,8 @@ def on_ui_tabs():
                 )
             with gr.Column(scale=6):
                 preview_html = gr.TextArea(interactive=False, lines=1, show_label=False, visible=True)
+        with gr.Row():
+            pr=gr.Progress(track_tqdm=True)
 
         download_model.click(
             fn=get_model_url,
@@ -46,7 +48,7 @@ def on_ui_tabs():
 
         return [(ui_component, "ControlNet Models", "extension_cn_models")]
 
-def get_model_url(model_name):
+def get_model_url(model_name, pr=gr.Progress(track_tqdm=True)):
     if model_name == "none":
         DOWNLOAD_STATUS = "Please select a controlnet model"
         return gr.TextArea.update(value="Please select a controlnet model", visible=True)
@@ -85,68 +87,61 @@ def get_model_url(model_name):
         msg = "Downloading "+file_name+"..."
         DOWNLOAD_STATUS = msg
         
-        return download_file(url, file_name)
-
-def download_file(url, file_name, pr=gr.Progress(track_tqdm=True)):
-    if not os.path.exists(MODELFOLDER):
-        os.makedirs(MODELFOLDER)
+        if not os.path.exists(MODELFOLDER):
+            os.makedirs(MODELFOLDER)
     
-    new_file = os.path.join(MODELFOLDER, file_name)
-    print(new_file)
+        new_file = os.path.join(MODELFOLDER, file_name)
+        print(new_file)
 
-    max_retries = 5
-    retry_delay = 10
+        max_retries = 5
+        retry_delay = 10
+        
+        while True:
+            if os.path.exists(new_file):
+                downloaded_size = os.path.getsize(new_file)
+                headers = {"Range": f"bytes={downloaded_size}-"}
+            else:
+                downloaded_size = 0
+                headers = {}
 
-    while True:
-        if os.path.exists(new_file):
+            tokens = re.split(re.escape('\\'), new_file)
+            file_name_display = tokens[-1]
+
+            progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {file_name_display}", initial=downloaded_size, leave=False)
+
+            with open(new_file, "ab") as f:
+                while True:
+                    try:
+                        response = requests.get(url, headers=headers, stream=True)
+                        total_size = int(response.headers.get("Content-Length", 0))
+
+                        if total_size == 0:
+                            total_size = downloaded_size
+                        progress.total = total_size
+
+                        for chunk in response.iter_content(chunk_size=1024):
+                            if chunk:
+                                f.write(chunk)
+                                progress.update(len(chunk))
+
+                        downloaded_size = os.path.getsize(new_file)
+                        break
+                    except ConnectionError as e:
+                        max_retries -= 1
+
+                        if max_retries == 0:
+                            raise e
+
+                        time.sleep(retry_delay)
+
+            progress.close()
             downloaded_size = os.path.getsize(new_file)
-            headers = {"Range": f"bytes={downloaded_size}-"}
-        else:
-            downloaded_size = 0
-            headers = {}
 
-        tokens = re.split(re.escape('\\'), new_file)
-        file_name_display = tokens[-1]
-
-        progress = tqdm(total=1000000000, unit="B", unit_scale=True,
-                        desc=f"Downloading {file_name_display}",
-                        initial=downloaded_size, leave=False)
-
-        with open(new_file, "ab") as f:
-            while True:
-                try:
-                    response = requests.get(url, headers=headers, stream=True)
-                    total_size = int(response.headers.get("Content-Length", 0))
-
-                    if total_size == 0:
-                        total_size = downloaded_size
-                    progress.total = total_size
-
-                    for chunk in response.iter_content(chunk_size=1024):
-                        if chunk:
-                            f.write(chunk)
-                            progress.update(len(chunk))
-
-                    downloaded_size = os.path.getsize(new_file)
-                    break
-                except ConnectionError as e:
-                    max_retries -= 1
-
-                    if max_retries == 0:
-                        raise e
-
-                    time.sleep(retry_delay)
-
-        progress.close()
-        downloaded_size = os.path.getsize(new_file)
-
-        if downloaded_size >= total_size:
-            DOWNLOAD_STATUS = "{file_name_display} successfully downloaded."
-            print(f"{file_name_display} successfully downloaded.")
-            return gr.TextArea(value="{file_name_display} successfully downloaded.", visible=True)
-        else:
-            DOWNLOAD_STATUS = "Error: File download failed. Retrying... {file_name_display}"
-            print(f"Error: File download failed. Retrying... {file_name_display}")
-            return gr.TextArea(value="Error: File download failed. Retrying... {file_name_display}", visible=True)
+            if downloaded_size >= total_size:
+                print(f"{file_name_display} successfully downloaded.")
+                return gr.TextArea.update(value="Model "+model_name+" successfully downloaded.", visible=True)
+            else:
+                print(f"Error: File download failed. Retrying... {file_name_display}")
+                return gr.TextArea.update(value="Error: File download failed. Retrying...", visible=True)
 
 script_callbacks.on_ui_tabs(on_ui_tabs)
