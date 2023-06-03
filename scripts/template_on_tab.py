@@ -107,7 +107,7 @@ def get_model_url(model_name, pr=gr.Progress(track_tqdm=True)):
             tokens = re.split(re.escape('\\'), new_file)
             file_name_display = tokens[-1]
 
-            progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {file_name_display}", initial=downloaded_size, leave=False)
+            progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading model {model_name}...", initial=downloaded_size, leave=False)
 
             with open(new_file, "ab") as f:
                 while True:
