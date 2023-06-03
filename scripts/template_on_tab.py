@@ -17,7 +17,7 @@ import re
 from requests.exceptions import ConnectionError
 import urllib.request
 
-MODELFOLDER = "extensions\sd-webui-controlnet\models"
+MODELFOLDER = "extensions/sd-webui-controlnet/models"
 DOWNLOAD_STATUS = "Please wait..."
 
 def on_ui_tabs():
